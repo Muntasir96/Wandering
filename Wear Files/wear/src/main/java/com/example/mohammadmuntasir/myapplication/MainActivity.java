@@ -3,47 +3,30 @@ package com.example.mohammadmuntasir.myapplication;
 import android.os.Bundle;
 import android.support.wearable.activity.WearableActivity;
 import android.widget.TextView;
-import java.util.concurrent.TimeUnit;
 import android.os.Handler;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.ServerSocket;
-import java.net.Socket;
 
 import android.net.wifi.WifiManager;
-import java.util.Formatter;
-
-import java.net.NetworkInterface;
-import java.util.Enumeration;
-import java.net.InetAddress;
 import android.app.NotificationManager;
 
 import android.content.Context;
 import android.text.format.Time;
-import java.io.DataInputStream;
 import java.util.Calendar;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Random;
 import android.os.BatteryManager;
-import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
-import java.net.MalformedURLException;
-import java.net.HttpURLConnection;
 import android.graphics.Color;
-import java.io.DataOutputStream;
 import android.os.AsyncTask;
 import android.util.Log;
 import android.app.NotificationChannel;
 import android.support.v4.app.NotificationCompat;
-import android.support.v4.app.NotificationCompat.Builder;
 import android.content.Intent;
 import android.app.TaskStackBuilder;
 import android.app.PendingIntent;
@@ -53,29 +36,25 @@ import android.net.Uri;
 import android.media.RingtoneManager;
 import android.media.Ringtone;
 import android.provider.Settings;
-import android.view.View;
-import android.widget.RelativeLayout;
-import android.widget.LinearLayout;
-import android.view.MotionEvent;
+
 public class MainActivity extends WearableActivity {
 
     private TextView mTextView;
-    private ServerSocket serverSocket;
     Handler updateConversationHandler;
-    Thread serverThread = null;
     TextView message;
-    String recent = "No signal";
-    int ns = 2;
-    int dq = 0;
-    int dl = 5;
+    String recent = "4No signal"; // 4 means greay color
     Time mytime;
     Handler handler;
     Runnable r;
-    String nowZone = "No signal";
-    public static final int port = 1095;
-
+    String nowZone = "4No signal";
+    
+    String ip = "192.168.1.105"; // THIS IS IP ADDRESS OF HOST SERVER FROM PC
+    int port = 6991; // THIS IS PORT NUMBER FROM HOST SERVER FROM PC
+    
     @Override
     protected void onCreate(Bundle savedInstanceState){
+        
+        // Initialize text and processes
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         mTextView = (TextView) findViewById(R.id.text);
@@ -91,6 +70,7 @@ public class MainActivity extends WearableActivity {
         message.setY(1);
         mytime = new Time();
 
+        // Runs the main function: SetTime() every 1 second
         r = new Runnable() {
             @Override
             public void run() {
@@ -102,9 +82,6 @@ public class MainActivity extends WearableActivity {
         handler = new Handler();
         handler.postDelayed(r,1000);
 
-
-
-
         String zone = "";
 
     }
@@ -114,75 +91,36 @@ public class MainActivity extends WearableActivity {
         DateFormat df = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss"); // gets date and time
         Date today = Calendar.getInstance().getTime();
         String reportDate = df.format(today);
-        BatteryManager bm = (BatteryManager)getSystemService(BATTERY_SERVICE);
-        int batLevel = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
-        Random Rand = new Random();
-        //int idx = Rand.nextInt(3);
-        String[] zones = {"safe", "warning", "danger"};
-        String[] colors = {"#808080","#00FF00","#FFFF00","#FF0000"};
+        
+        BatteryManager bm = (BatteryManager)getSystemService(BATTERY_SERVICE); // battery
+        String[] colors = {"#00FF00","#FFFF00", "#FF0000" ,"#FF0000", "#808080"}; // [green, yellow, red, red, gray]
+        
         GetContents gc = new GetContents(); // VERY IMPORTANT THIS GETS THE MESSAGE FROM THE SERVER HOSTED BY THE PC PROGRAM
-        gc.execute("nothingß");
-        int idx = 0;
-        int zoneNum = Character.getNumericValue(nowZone.charAt(0));
-        if(zoneNum == 1){ // hallway
-            idx = 2;
-            if(dq > 0 && ns == 0){
-                dq--; // dq is the danger level
-            }
+        gc.execute("nothing");
+        
+        int zoneNum = Character.getNumericValue(nowZone.charAt(0)); // code from the server
+        if(zoneNum == 3){ // 3 means red color AND ALERT THE WATCH
+            String notifdesp = "The patient was at the Front Door " + reportDate.substring(11,reportDate.length()); // write notification
+            notifyThis("Danger", notifdesp); // calls the notification methods
+            playSound(); // plays the audiofile
         }
-        if(zoneNum == 0){ // bedroom
-            idx = 1;
-            if(dq > 0 && ns == 0){
-                dq--;
-            }
-        }
-        if(zoneNum == 2){ // front door
-            idx = 3;
-            if(dq < dl && ns == 0){ // dl is the danger limit
-                dq++;
-            }
-            if(dq == dl && ns == 0){ // dq reached dl so we alert the user
-                dq = 0;
-                String notifdesp = "The patient was at the Front Door " + reportDate.substring(11,reportDate.length());
-                notifyThis("Danger", notifdesp); // calls the notification methods
-                playSound(); // plays the ringtone
-            }
-        }
+        
+        // set text, position, and color
         String str = "Date: " + reportDate.substring(0,6) + reportDate.substring(8,10) + "\nTime: " + reportDate.substring(11,reportDate.length()) + "\n" + nowZone.substring(1,nowZone.length()); // displays the message
         message.setGravity(Gravity.CENTER);
-        Log.d("Wandering", "Danger lvl is " + Integer.toString(dq));
-        message.setTextColor(Color.parseColor(colors[idx]));
+        message.setTextColor(Color.parseColor(colors[zoneNum]));
         message.setText(str); // sets the text
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        try {
-            serverSocket.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
 
     private class GetContents extends AsyncTask<String, Void, String> { // reads the message on the flask server hosted by the pc program
         protected String doInBackground(String... p) {
             String targetURL = p[0];
-            //String urlParameters = p[1];
             URL url;
-            HttpURLConnection connection = null;
-            Socket          socket   = null;
-            ServerSocket    server   = null;
-            DataInputStream in       =  null;
-
-
-            try {
-                // http://192.168.1.105:6991/
-                // 192.168.0.13
-                url = new URL("http://192.168.0.13:6991/");
-
-                // Get the input stream through URL Connection
+            try { // the server is up
+                url = new URL("http://" + ip + ":" + Integer.toString(port)); // reads the server
+                
+                // open connection
                 URLConnection con = url.openConnection();
                 InputStream is = con.getInputStream();
 
@@ -190,24 +128,16 @@ public class MainActivity extends WearableActivity {
 
                 String line = null;
 
-                // read each line and write to System.out
                 while ((line = br.readLine()) != null) {
                     Log.d("TAG", line);
                     //message.setText(line);
-                    nowZone = line;
-                    recent = line;
-                    if(ns > 0){
-                        ns--;
-                    }
+                    nowZone = line; // nowZone will be used in setTime()
+                    recent = line; // set the most recent zone to the message
                 }
                 return line;
-            } catch (IOException e) {
+            } catch (IOException e) { // server is down
                 Log.d("TAG", "nothing");
-                nowZone = "3No signal";
-                if(ns < 2){
-                    ns++;
-                    nowZone = recent;
-                }
+                nowZone = recent; // get the most recent zone
                 return null;
             }
 
@@ -224,19 +154,19 @@ public class MainActivity extends WearableActivity {
         Ringtone r = RingtoneManager.getRingtone(getApplicationContext(), notification);
         r.play();
 
-        final MediaPlayer player = MediaPlayer.create(this,
-                Settings.System.DEFAULT_RINGTONE_URI);
+        //final MediaPlayer player = MediaPlayer.create(this,
+        //                Settings.System.DEFAULT_RINGTONE_URI); // RING TONE
 
-        MediaPlayer mMediaPlayer = new MediaPlayer();
-        mMediaPlayer = MediaPlayer.create(this, R.raw.wearnotif);
+        final MediaPlayer player = MediaPlayer.create(this,
+                R.raw.wearnotif); // AUDIO FILE
 
         player.start();
         Handler handler = new Handler();
-        handler.postDelayed(new Runnable() {
+        handler.postDelayed(new Runnable() { // PLAYS THE AUDIO FILE FOR 5 SECONDS
             public void run() {
                 player.stop();
             }
-        }, ((dl-1)*1000));
+        }, (5*1000));
         Log.d("Sound", "Sound is played");
 
     }
@@ -245,7 +175,7 @@ public class MainActivity extends WearableActivity {
 
         NotificationManager notificationManager = (NotificationManager) this.getSystemService(Context.NOTIFICATION_SERVICE);
 
-
+            // INITIALIZE NOTIFICATION INFO
             String CHANNEL_ID = "my_channel_01";
             CharSequence name = "my_channel";
             String Description = "This is my channel";
@@ -259,7 +189,7 @@ public class MainActivity extends WearableActivity {
             mChannel.setShowBadge(true);
             notificationManager.createNotificationChannel(mChannel);
 
-
+        // BUILD NOTIFCATION
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setDefaults(NotificationCompat.DEFAULT_ALL)
                 .setSmallIcon(R.drawable.notif)
@@ -270,7 +200,7 @@ public class MainActivity extends WearableActivity {
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);//to show content in lock screen
 
 
-
+       
         Intent resultIntent = new Intent(this, MainActivity.class);
         TaskStackBuilder stackBuilder = TaskStackBuilder.create(this);
         stackBuilder.addParentStack(MainActivity.class);
@@ -279,9 +209,12 @@ public class MainActivity extends WearableActivity {
 
         builder.setContentIntent(resultPendingIntent);
 
+        // NOTIFY
         notificationManager.notify(NOTIFICATION_ID, builder.build());
         Log.d("TAG", "Notification is built");
     }
 }
+
+
 
 
