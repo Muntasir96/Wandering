@@ -1,7 +1,3 @@
-# Created between November 13 and November 20 2018
-
-# Built upon wanderServerv1 with a few minor changes - sending the location name to server and adding a location column to excel
-
 ################################################# Import libraries #################################################
 import sys
 import os.path
@@ -27,15 +23,20 @@ import multiprocessing
 
 inc = 2 # The app will read telnet signals every <inc> seconds
 
-def readyDL(): # This will ready the data logging file and fill it in the intial information
+# This program creates two types of files: data logging and zone logging
+# Data Log files are text files have the technical information for each packet such as battery power, transmit power, transmission intervals, etc
+# Zone Log files are excel files that state where the tag is located in every <inc> seconds
+
+# This will ready the data logging file and fill it in the intial information
+def readyDL(): 
     global inc
-    dt = datetime.datetime.now()
+    dt = datetime.datetime.now() # Gets the date and time
     dtnm = str(dt)[0:19]
     test =  str(datetime.datetime.now())[0:19]
     zdt = datetime.datetime.strptime(test, '%Y-%m-%d %H:%M:%S').strftime('%m-%d-%Y_%H.%M.%S')
 
     print(zdt)
-    filecount = int(open(r"C:\Users\wandering\Desktop\WanderProj\DataLog\counter.txt","r").read())
+    filecount = int(open(r"C:\Users\wandering\Desktop\WanderProj\DataLog\counter.txt","r").read()) # this is the number of the file
 
     zeroos = '0'
     if (filecount < 10):
@@ -48,7 +49,7 @@ def readyDL(): # This will ready the data logging file and fill it in the intial
     completeName = os.path.join(save_path, oname)
     f = open(completeName,"w+")
 
-    f.write("The file number is " + zeroos + str(filecount) + "\n")
+    f.write("The file number is " + zeroos + str(filecount) + "\n") # This is the initifial informatiom
     f.write("The date is " + zdt[0:10] + "\n")
     f.write("The start time is " + zdt[11:] + "\n")
     f.write("This program didn't finish properly!\n")
@@ -59,8 +60,8 @@ def readyDL(): # This will ready the data logging file and fill it in the intial
 
 (f, completeName, filecount, oname) = readyDL() # f is the actual new file, completeName is the name of the file with the pathe file, file count is the counter number, and oname is the name of the output data log file without the path name  
 
-
-def replace_line(file_name, line_num, text): # replaces a line in a text file with a text
+# replaces a line in a text file with a text. This is used to update the number of seconds that the datalogging files has run for
+def replace_line(file_name, line_num, text): 
     lines = open(file_name, 'r').readlines()
     lines[line_num] = text
     out = open(file_name, 'w')
@@ -73,12 +74,13 @@ def replace_line(file_name, line_num, text): # replaces a line in a text file wi
 
 xlcount = 1 # this is used to start counting the rows on an  excel file
 
-def readyZL(): # This will ready the data logging file and fill it in the intial information
-    dt = datetime.datetime.now()
+# This will ready the zone logging file and fill it in the intial information
+def readyZL():
+    dt = datetime.datetime.now() # Gets the date and time
     dtnm = str(dt)[0:19]
     test =  str(datetime.datetime.now())[0:19]
     zdt = datetime.datetime.strptime(test, '%Y-%m-%d %H:%M:%S').strftime('%m-%d-%Y_%H.%M.%S')
-    filecount = int(open(r"C:\Users\wandering\Desktop\WanderProj\DataLog\counter.txt","r").read())
+    filecount = int(open(r"C:\Users\wandering\Desktop\WanderProj\DataLog\counter.txt","r").read()) # this is the number of the file
 
     zeroos = '0'
     if (filecount < 10):
@@ -93,11 +95,11 @@ def readyZL(): # This will ready the data logging file and fill it in the intial
     workbook = xlsxwriter.Workbook(complexName)
     worksheet = workbook.add_worksheet("Log")
     bold = workbook.add_format({'bold':True})
-    worksheet.write('A1', 'DATE', bold)
+    worksheet.write('A1', 'DATE', bold) # Reader the header names
     worksheet.write('B1', 'TIME', bold)
     worksheet.write('C1', 'ZONE', bold)
     worksheet.write('D1', 'LOCATION', bold)
-    worksheet.set_column('A:A',20)
+    worksheet.set_column('A:A',20) # Indicate the column widths
     worksheet.set_column('B:B',20)
     worksheet.set_column('C:C',20)
     worksheet.set_column('D:D',35)
@@ -118,7 +120,10 @@ def zonelog(date, time, zone, loc): # this simply adds a row to the current exce
 
 
 ################################################# TIME MECH #################################################
-def addSecs(tm, secs): # this file is used to give a resulting time after adding X seconds
+# this file is used to give a resulting time after adding X seconds
+# Current zone and data logging files will be closed after the program stops or after <tb> seconds. Which ever comes first.
+# To estimate to create a new file after <tb> seconds we use the TIME MECH
+def addSecs(tm, secs): 
     fulldate = datetime.datetime(100, 1, 1, tm.hour, tm.minute, tm.second)
     fulldate = fulldate + datetime.timedelta(seconds=secs)
     return fulldate.time()
@@ -131,7 +136,9 @@ tend = addSecs(tnow,tb)
 
 
 ################################################# DATA LOG #################################################
-def datalog(lines, f, dist, time, zone): # this is a very lengthy function that is used to extract data from the command strings emmitted by the tag. The information will be included in the data logging files
+# this is a very lengthy function that is used to extract data from the command strings emmitted by the tag. The information will be included in the data logging files
+# You can ignore this function
+def datalog(lines, f, dist, time, zone):
     for packet in lines:
         packet = packet[2:-1]
         if len(packet) >= 26:
@@ -506,9 +513,9 @@ input("\nPress any key to continue \n")
 
 
 ################################################# READY THE TELNET MODULES #################################################
-ip0 = "192.168.1.129" # the bedroom base reader or SAFE
-ip1 = "192.168.1.127" # the hallway base reader or WARNING
-ip2 = "192.168.1.126" # the front door base reader or DANGER
+ip0 = "192.168.1.129" # the SAFE BASE READER
+#ip1 = "192.168.1.127" # extra
+ip2 = "192.168.1.126" # the DANGER BASE READER
 port = 10001 # dont change this
 
 tn0 = telnetlib.Telnet(ip0,port) # starting connection to base reader 0
@@ -516,11 +523,12 @@ dummy = tn0.read_very_eager()
 tn0.close()
 tn0 = telnetlib.Telnet(ip0,port)
 
+''''
 tn1 = telnetlib.Telnet(ip1,port) # starting connection to base reader 1
 dummy = tn1.read_very_eager()
 tn1.close()
 tn1 = telnetlib.Telnet(ip1,port)
-
+'''
 
 tn2 = telnetlib.Telnet(ip2,port) # starting connection to base reader 2
 dummy = tn2.read_very_eager()
@@ -530,34 +538,35 @@ tn2 = telnetlib.Telnet(ip2,port)
 
 ################################################# RUN THE APP #################################################
 
-danger = 0
-recent = "empty"
-rL = -1
-buffer = 10
+danger = 0 # danger level will decrease at safe zone and increase at danger zone by inc.  It will alert user when it hits dL
+recent = "empty" # the most recent zone
 cmd = "py myFlask.py " # this is the command line that will call the server file
-p = subprocess.Popen(cmd+'NO_SIGNAL') 
+p = subprocess.Popen(cmd+'NO_SIGNAL')
+dL = 6 # when the danger variable reaches this, it will send a notification
 
 class IntervalW(Label): # THE MAIN APP
     def update(self, *args): # THIS METHOD WILL RUN EVERY <inc> seconds
+        
+        # tn_read0 is all the commands from the tag through base reader0 for the time period of <inc> seconds
+        # tn_read1 is all the commands from the tag through base reader1 for the time period of <inc> seconds
         tn_read0 = str(tn0.read_very_eager()) # gets a list of commands from base reader 0 from the past <inc> seconds
-        tn_read1 = str(tn1.read_very_eager()) # gets a list of commands from base reader 1 from the past <inc> seconds
+        #tn_read1 = str(tn1.read_very_eager()) # gets a list of commands from base reader 1 from the past <inc> seconds
         tn_read2 = str(tn2.read_very_eager()) # gets a list of commands from base reader 2 from the past <inc> seconds
 
-        packets0 = tn_read0.split("r") # splits the string into a list
-        packets1 = tn_read1.split("r")
+        
+        packets0 = tn_read0.split("r") # splits the commands from a string into a list
+        #packets1 = tn_read1.split("r")
         packets2 = tn_read2.split("r")
         print("=================================================")
         print("safe: " + str(len(packets0)))
-        print("warning: " + str(len(packets1)))
+        #print("warning: " + str(len(packets1)))
         print("danger: " + str(len(packets2)))
         
-        test =  str(datetime.datetime.now())[0:19]
+        test =  str(datetime.datetime.now())[0:19] # date and time
         zdt = datetime.datetime.strptime(test, '%Y-%m-%d %H:%M:%S').strftime('%m-%d-%Y_%I:%M:%S')
         zone = "NA"
         global danger # getting the global files from outside this function to reader the datalog and zonelog files
-        global rL
         global recent
-        global buffer
         global tnow
         global tb
         global tend
@@ -569,63 +578,40 @@ class IntervalW(Label): # THE MAIN APP
         global filecount
         global xlcount
         global p
-        if(len(packets0) == 1 and len(packets1) == 1 and len(packets2) == 1): # there is no signals from any base readers (length 1 means no signal according to my split)
+        global dL
+        
+        # This if-else block estimates where the tag is
+        if(len(packets0) == 1 and len(packets2) == 1): # there is no signals from any base readers (length 1 means no signal according to my split)
             zone = "none"
-            recent = "-"
-            if rL == 0:
-                self.text = "     NO SIGNAL" + "\n" +"LAST SEEN: " + recent + "\n" + time.asctime()
-                self.font_size = 55
-                self.color = (0,1,0.5,1)
-            elif rL == 1:
-                self.text = "     NO SIGNAL" +"\n" + "LAST SEEN: " + recent + "\n" + time.asctime()
-                self.font_size = 55
-                self.color = (1,1,0.5,1)
-            elif rL == 2:
-                self.text = "     NO SIGNAL" + "\n" +"LAST SEEN: " + recent + "\n" + time.asctime()
-                self.font_size = 55
-                self.color = (1,0.5,0,1)
-            else:
-                self.text = "    NO SIGNAL" + "\n" + time.asctime()
-                self.font_size = 55
-                self.color = (1.5,0.5,0.5,1)
-                p.kill()
-                p = subprocess.Popen(cmd+"3NO_SIGNAL")
-        elif(len(packets0) == max(len(packets0),len(packets1),len(packets2))): # base reader bedroom has the most packets
+            self.text = "     WARNING" + "\n" + time.asctime() # no signal indicates warning
+            self.font_size = 55
+            self.color = (1,1,0,1)
+            p.kill() # kills the flask server
+            p = subprocess.Popen(cmd+"1WARNING") # send warning signal to the server to be read by watch. 1 MEANS YELLOW COLOR
+        elif(len(packets0) == max(len(packets0),len(packets2))): # base reader safe has the most packets
             zone = "safe"
-            recent = "BEDROOM"
-            rL = 0
-            self.text = "          " + recent + "\n" + time.asctime()
+            self.text = "          " + "SAFE" + "\n" + time.asctime() # tag in safe zone
             self.font_size = 55
             self.color = (0,1,0,1)
             if danger >= 0:
-                danger = danger - 1
-            p.kill() # kills the current subprocess
-            p = subprocess.Popen(cmd+"0BEDROOM") # new supprocess opens another python file myFlask.py that sends the message to the local server
-        elif(len(packets2) == max(len(packets0),len(packets1),len(packets2))):# base reader front door has the most packets
+                danger = danger - inc # decrease danger until 0
+            p.kill() # kills the flask server
+            p = subprocess.Popen(cmd+"0SAFE") # new supprocess opens another python file myFlask.py that sends the message to the local server. 0 MEANS GREEN COLOR
+        elif(len(packets2) == max(len(packets0),len(packets2))):# base reader front door has the most packets
             zone = "danger"
-            recent = "FRONT DOOR"
-            rL = 2
-            self.text = "        " + recent + "!\n" + time.asctime()
+            self.text = "        " + "DANGER" + "!\n" + time.asctime()
             self.font_size = 55
             self.color = (1,0,0,1)
             if danger <= 5:
-                danger = danger + 1
-            p.kill()
-            p = subprocess.Popen(cmd+"2FRONT_DOOR")# new supprocess opens another python file myFlask.py that sends the message to the local server
+                danger = danger + inc
+            p.kill() # kills the flask server
+            if danger >= dL: # hit the danger ceiling
+                p = subprocess.Popen(cmd+"3DANGER")# new supprocess opens another python file myFlask.py that sends the message to the local server. 3 MEANS RED COLOR AND ALERT WATCH
+            else: # did not hit the danger ceiling
+                p = subprocess.Popen(cmd+"2DANGER")# new supprocess opens another python file myFlask.py that sends the message to the local server. 2 MEANS RED COLOR BUT DONT ALERT YET
 
-        else: # base reader hallway has the most packets
-            zone = "warning"
-            recent = "HALLWAY"
-            rL = 1
-            self.text = "         " + recent + "\n" + time.asctime()
-            self.font_size = 55
-            self.color = (1,1,0,1)
-            if danger >= 0:
-                danger = danger - 1
-            p.kill()
-            p = subprocess.Popen(cmd+"1HALLWAY")# new supprocess opens another python file myFlask.py that sends the message to the local server
-        if danger >= 5:
-            danger = 0
+        if danger >= dL: # if passes the danger level
+            danger = 0 # reset to zero
             print("notification")
             plays = subprocess.Popen([sys.executable, 'PlaySound.py'], 
                                     stdout=subprocess.PIPE, 
@@ -641,9 +627,10 @@ class IntervalW(Label): # THE MAIN APP
 
         tnow = datetime.datetime.now().time() # finish up the current data long and zone log files if <tb> seconds passed and then open up anotehr file
         dnow = datetime.datetime.today().strftime('%Y-%m-%d')
+        
+        # The following if else block simply creates new files if <tb> seconds passed
         if (tend >= tnow or tdate != dnow): 
             datalog(packets0,f, "safe", zdt[11:], zone)
-            datalog(packets1,f, "warning", zdt[11:], zone)
             datalog(packets2,f, "danger", zdt[11:], zone)
             zonelog(zdt[:10],zdt[11:], zone, recent)
             tdate = dnow
@@ -651,7 +638,7 @@ class IntervalW(Label): # THE MAIN APP
             f.close()
             workbook.close()
             dt = datetime.datetime.now()
-            dtnm = str(dt)[0:19]\
+            dtnm = str(dt)[0:19]
 
             test =  str(datetime.datetime.now())[0:19]
             endTime = datetime.datetime.strptime(test, '%Y-%m-%d %H:%M:%S').strftime('%m-%d-%Y_%H.%M.%S')
@@ -669,7 +656,7 @@ class IntervalW(Label): # THE MAIN APP
 
 
 
-class WanderApp(App): # call the file
+class WanderApp(App): # call the desktop app to run
     def build(self):
         self.title = 'Wandering Emulation V3'
         base = IntervalW()
@@ -684,14 +671,12 @@ if __name__ == "__main__":
 
 ################################################# CLOSE THE PROGRAM #################################################
 
-# close all the files
-
-
+# close all the files and close the program
 f.close()
 workbook.close()
 
 dt = datetime.datetime.now()
-dtnm = str(dt)[0:19]\
+dtnm = str(dt)[0:19]
 
 test =  str(datetime.datetime.now())[0:19]
 endTime = datetime.datetime.strptime(test, '%Y-%m-%d %H:%M:%S').strftime('%m-%d-%Y_%H.%M.%S')
